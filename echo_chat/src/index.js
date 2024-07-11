@@ -49,7 +49,7 @@ module.exports = {
 
       socket.emit("welcome", {
         user: "server",
-        text: `${socket.id}, Welcome to the EchoChat`
+        text: `Welcome to EchoChat, your socket id - ${socket.id}`
       })
 
       socket.on("sendMessage", async (data) => {
@@ -87,26 +87,28 @@ module.exports = {
               sender: 'server',
               content: data.message,
             },
-          ]
-
+          ];
+          
           try {
             const token = socket.handshake.query.token;
-            const fetchPromises = newMessage.map(message =>
-              fetch('http://localhost:1337/api/messages', {
+            const headers = {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            }
+            const sendMessage = async (message) => {
+              const response = await fetch('http://localhost:1337/api/messages', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
+                headers,
                 body: JSON.stringify({ data: message }),
-              })
-                .then(response => response.json())
-            );
-
-            const responses = await Promise.all(fetchPromises);
+              });
+              return response.json();
+            };
+          
+            const firstResponse = await sendMessage(newMessage[0]);
+            const secondResponse = await sendMessage(newMessage[1]);
 
             socket.emit('newSession', { newSession })
-            socket.emit('resMessage', responses);
+            socket.emit('resMessage', [firstResponse, secondResponse]);
           } catch (error) {
             console.error('Error:', error);
             socket.emit('resMessageError', 'Failed to fetch messages');
@@ -140,22 +142,24 @@ module.exports = {
             })
             
             const token = socket.handshake.query.token;
-            const fetchPromises = messages.map(message =>
-              fetch('http://localhost:1337/api/messages', {
+            const headers = {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            }
+            const sendMessage = async (message) => {
+              const response = await fetch('http://localhost:1337/api/messages', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
+                headers,
                 body: JSON.stringify({ data: message }),
-              })
-                .then(response => response.json())
-            );
+              });
+              return response.json();
+            };
 
-            const responses = await Promise.all(fetchPromises);
+            const firstResponse = await sendMessage(messages[0]);
+            const secondResponse = await sendMessage(messages[1]);
 
             socket.emit('updatedSession',sessionToUpdate)
-            socket.emit('resMessage', responses)
+            socket.emit('resMessage', [firstResponse, secondResponse]);
           } catch (error) {
             console.error('Error:', error)
             socket.emit('resMessageError', 'Failed to fetch messages')
@@ -177,6 +181,31 @@ module.exports = {
         } catch (error) {
           socket.emit('messages', { error: 'Failed to fetch messages' });
         }
+      })
+
+      socket.on('deleteSession', async ({ userId, sessionId }) => {
+
+        try {
+          const messagesToDelete = await strapi.db.query('api::message.message').findMany({
+            where: { session: sessionId },
+          });
+    
+          const messageIds = messagesToDelete.map(message => message.id);
+    
+          await strapi.db.query('api::message.message').deleteMany({
+            where: { id: { $in: messageIds } },
+          });
+    
+          await strapi.db.query('api::session.session').delete({
+            where: { id: sessionId, users_permissions_user: userId },
+          });
+    
+          socket.emit('sessionDeleted', { sessionId });
+        } catch (error) {
+          console.error('Error deleting session:', error);
+          socket.emit('error', { message: 'Failed to delete session' });
+        }
+
       });
 
       socket.on("kick", (data) => {
