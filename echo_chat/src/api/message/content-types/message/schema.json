@@ -12,17 +12,11 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "session": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::session.session",
-      "inversedBy": "message"
-    },
     "users_permissions_user": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
-      "inversedBy": "message"
+      "inversedBy": "messages"
     },
     "content": {
       "type": "text",
@@ -30,6 +24,15 @@
     },
     "is_read": {
       "type": "boolean"
+    },
+    "sender": {
+      "type": "string"
+    },
+    "session": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::session.session",
+      "inversedBy": "messages"
     }
   }
 }

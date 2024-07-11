@@ -374,18 +374,19 @@ export interface ApiMessageMessage extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    session: Attribute.Relation<
-      'api::message.message',
-      'oneToOne',
-      'api::session.session'
-    >;
     users_permissions_user: Attribute.Relation<
       'api::message.message',
-      'oneToOne',
+      'manyToOne',
       'plugin::users-permissions.user'
     >;
     content: Attribute.Text & Attribute.Required;
     is_read: Attribute.Boolean;
+    sender: Attribute.String;
+    session: Attribute.Relation<
+      'api::message.message',
+      'manyToOne',
+      'api::session.session'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -422,14 +423,14 @@ export interface ApiSessionSession extends Schema.CollectionType {
       'plugin::users-permissions.user'
     >;
     start_time: Attribute.DateTime;
-    end_time: Attribute.DateTime;
     active: Attribute.Boolean;
-    message: Attribute.Relation<
+    name: Attribute.String;
+    messages: Attribute.Relation<
       'api::session.session',
-      'oneToOne',
+      'oneToMany',
       'api::message.message'
     >;
-    name: Attribute.String;
+    last_message: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -862,9 +863,9 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'oneToMany',
       'api::session.session'
     >;
-    message: Attribute.Relation<
+    messages: Attribute.Relation<
       'plugin::users-permissions.user',
-      'oneToOne',
+      'oneToMany',
       'api::message.message'
     >;
     createdAt: Attribute.DateTime;

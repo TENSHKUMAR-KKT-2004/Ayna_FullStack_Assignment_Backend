@@ -72,9 +72,9 @@
       "target": "api::session.session",
       "mappedBy": "users_permissions_user"
     },
-    "message": {
+    "messages": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "oneToMany",
       "target": "api::message.message",
       "mappedBy": "users_permissions_user"
     }

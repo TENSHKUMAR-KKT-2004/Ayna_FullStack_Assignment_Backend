@@ -21,19 +21,19 @@
     "start_time": {
       "type": "datetime"
     },
-    "end_time": {
-      "type": "datetime"
-    },
     "active": {
       "type": "boolean"
     },
-    "message": {
+    "name": {
+      "type": "string"
+    },
+    "messages": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "oneToMany",
       "target": "api::message.message",
       "mappedBy": "session"
     },
-    "name": {
+    "last_message": {
       "type": "string"
     }
   }

@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 module.exports = {
   /**
@@ -18,9 +18,9 @@ module.exports = {
    */
   bootstrap({ strapi }) {
 
-    let interval;
+    let interval
     let { Server } = require('socket.io')
-    var axios = require("axios");
+    var axios = require("axios")
 
     var io = new Server(strapi.server.httpServer, {
       cors: {
@@ -37,91 +37,160 @@ module.exports = {
       try {
         //Socket Authentication
         let result = await strapi.plugins[
-              'users-permissions'
-            ].services.jwt.verify(socket.handshake.query.token);
-            //Save the User ID to the socket connection
-            socketUserToken = result.id;
-            socketUser = result.username
-            next();
-          } catch (error) {
-            console.log(error)
-          }
-    }).on("connection", function (socket) { 
-      socket.emit("welcome", { 
+          'users-permissions'
+        ].services.jwt.verify(socket.handshake.query.token)
+        socketUserToken = result.id
+        socketUser = result.username
+        next()
+      } catch (error) {
+        console.log(error)
+      }
+    }).on("connection", function (socket) {
+
+      socket.emit("welcome", {
         user: "server",
         text: `${socket.id}, Welcome to the EchoChat`
-      });
-
-      // Listening for a session started connection
-      socket.on('newSession', async (data) => {
-        let strapiData = {
-          data : {
-            users_permissions_user: data.user,
-            start_time: new Date(),
-            active: true,
-            name: data.name,
-          }
-        }
-
-        await fetch('http://localhost:1337/api/sessions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${socket.handshake.query.token}`,
-          },
-          body: JSON.stringify(strapiData),
-        })
-        .then(response => {
-          if (!response.ok) {
-            socket.emit('error',response)
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
-          return response.json();
-        }).then(data => {
-  console.log('Success:', data);
-  socket.emit("message", data);
-})
-.catch(error => {
-  console.error('Error:', error);
-});
       })
 
-      // Listening for a sendMessage connection
       socket.on("sendMessage", async (data) => {
-        let strapiData = { 
-          data: {
-            session: data.session,
-            users_permissions_user: data.user,
-            is_read:true,
-            content: data.message,
-          },
-        };
-        await axios
-          .post("http://localhost:1337/api/messages", strapiData, {
-            headers: {
-              Authorization: `Bearer ${socket.handshake.query.token}`,
-              'Content-Type': 'application/json',
+
+        if (!data.sessionId) {
+          const sessionCount = await strapi.db.query('api::session.session').count({
+            where: {
+              users_permissions_user: data.userId,
             },
-          })
-          .then((e) => {
-            socket.emit("message", strapiData);
-          })
-          .catch((e) => console.log("error", e.message));
+          });
+
+          const newSession = await strapi.db.query('api::session.session').create({
+            data: {
+              name: `Session ${sessionCount + 1}`,
+              start_time: new Date(),
+              active: true,
+              last_message: data.message,
+              users_permissions_user: data.userId,
+              publishedAt: new Date()
+            },
+          });
+
+          const newMessage = [
+            {
+              session: newSession.id,
+              users_permissions_user: data.userId,
+              is_read: true,
+              sender: data.username,
+              content: data.message,
+            },
+            {
+              session: newSession.id,
+              users_permissions_user: data.userId,
+              is_read: true,
+              sender: 'server',
+              content: data.message,
+            },
+          ]
+
+          try {
+            const token = socket.handshake.query.token;
+            const fetchPromises = newMessage.map(message =>
+              fetch('http://localhost:1337/api/messages', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ data: message }),
+              })
+                .then(response => response.json())
+            );
+
+            const responses = await Promise.all(fetchPromises);
+
+            socket.emit('newSession', { newSession })
+            socket.emit('resMessage', responses);
+          } catch (error) {
+            console.error('Error:', error);
+            socket.emit('resMessageError', 'Failed to fetch messages');
+          }
+
+        } else {
+          const messages = [
+            {
+              session: data.sessionId,
+              users_permissions_user: data.userId,
+              is_read: true,
+              sender: data.username,
+              content: data.message,
+            },
+            {
+              session: data.sessionId,
+              users_permissions_user: data.userId,
+              is_read: true,
+              sender: 'server',
+              content: data.message,
+            },
+          ]
+
+          try {
+            const sessionToUpdate = await strapi.db.query('api::session.session').update({
+              where: { id: data.sessionId },
+              data: {
+                start_time: new Date(),
+                last_message:data.message
+              },
+            })
+            
+            const token = socket.handshake.query.token;
+            const fetchPromises = messages.map(message =>
+              fetch('http://localhost:1337/api/messages', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ data: message }),
+              })
+                .then(response => response.json())
+            );
+
+            const responses = await Promise.all(fetchPromises);
+
+            socket.emit('updatedSession',sessionToUpdate)
+            socket.emit('resMessage', responses)
+          } catch (error) {
+            console.error('Error:', error)
+            socket.emit('resMessageError', 'Failed to fetch messages')
+          }
+        }
+      })
+
+      socket.on('fetchMessages', async ({ userId, sessionId }) => {
+        try {
+          const messages = await strapi.db.query('api::message.message').findMany({
+            where: {
+              users_permissions_user: userId,
+              session: sessionId,
+            },
+            populate: ['users_permissions_user', 'session'],
+          });
+
+          socket.emit('messages', { messages });
+        } catch (error) {
+          socket.emit('messages', { error: 'Failed to fetch messages' });
+        }
       });
 
-      // handle kickout events
       socket.on("kick", (data) => {
         io.sockets.sockets.forEach((socket) => {
           if (socket.id === data.socketid) {
-            socket.disconnect();
-            socket.removeAllListeners();
-            return console.log("kicked", socket.id, data.socketid);
+            socket.disconnect()
+            socket.removeAllListeners()
+            return console.log("kicked", socket.id, data.socketid)
           } else {
-            console.log("Couldn't kick", socket.id, data.socketid);
+            console.log("Couldn't kick", socket.id, data.socketid)
           }
-        });
-      });
+        })
+      })
 
-    });
+    })
   },
-};
+}
