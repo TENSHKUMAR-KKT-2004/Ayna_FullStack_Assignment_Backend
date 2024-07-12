@@ -24,7 +24,7 @@ module.exports = {
 
     var io = new Server(strapi.server.httpServer, {
       cors: {
-        origin: "http://localhost:3000",
+        origin: "https://echo-chat-2h3n.onrender.com/",
         methods: ["GET", "POST"],
         allowedHeaders: ["my-custom-header"],
         credentials: true,
@@ -96,7 +96,7 @@ module.exports = {
               Authorization: `Bearer ${token}`,
             }
             const sendMessage = async (message) => {
-              const response = await fetch('http://localhost:1337/api/messages', {
+              const response = await fetch('https://genuine-confidence-10f0398c7f.strapiapp.com/api/messages', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ data: message }),
@@ -147,7 +147,7 @@ module.exports = {
               Authorization: `Bearer ${token}`,
             }
             const sendMessage = async (message) => {
-              const response = await fetch('http://localhost:1337/api/messages', {
+              const response = await fetch('https://genuine-confidence-10f0398c7f.strapiapp.com/api/messages', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ data: message }),
