@@ -22,9 +22,9 @@ module.exports = {
     let { Server } = require('socket.io')
     var axios = require("axios")
 
-    var io = new Server(strapi.server.httpsServer, {
+    var io = new Server(strapi.server, {
       cors: {
-        origin: "https://echo-chat-2h3n.onrender.com/*",
+        origin: "https://echo-chat-2h3n.onrender.com/",
         methods: ["GET", "POST"],
         allowedHeaders: ["my-custom-header"],
         credentials: true,
