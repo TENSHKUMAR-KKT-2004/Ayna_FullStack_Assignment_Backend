@@ -41,11 +41,15 @@ module.exports = {
         ].services.jwt.verify(socket.handshake.query.token)
         socketUserToken = result.id
         socketUser = result.username
+        console.log(`Socket authenticated: ${socketUser}`)
+
         next()
       } catch (error) {
-        console.log(error)
+        console.error('Socket authentication failed:', error)
+        next(new Error('Authentication error'))
       }
     }).on("connection", function (socket) {
+      console.log(`New client connected: ${socket.id}`);
 
       socket.emit("welcome", {
         user: "server",
@@ -88,7 +92,7 @@ module.exports = {
               content: data.message,
             },
           ];
-          
+
           try {
             const token = socket.handshake.query.token;
             const headers = {
@@ -103,7 +107,7 @@ module.exports = {
               });
               return response.json();
             };
-          
+
             const firstResponse = await sendMessage(newMessage[0]);
             const secondResponse = await sendMessage(newMessage[1]);
 
@@ -137,10 +141,10 @@ module.exports = {
               where: { id: data.sessionId },
               data: {
                 start_time: new Date(),
-                last_message:data.message
+                last_message: data.message
               },
             })
-            
+
             const token = socket.handshake.query.token;
             const headers = {
               'Content-Type': 'application/json',
@@ -158,7 +162,7 @@ module.exports = {
             const firstResponse = await sendMessage(messages[0]);
             const secondResponse = await sendMessage(messages[1]);
 
-            socket.emit('updatedSession',sessionToUpdate)
+            socket.emit('updatedSession', sessionToUpdate)
             socket.emit('resMessage', [firstResponse, secondResponse]);
           } catch (error) {
             console.error('Error:', error)
@@ -189,17 +193,17 @@ module.exports = {
           const messagesToDelete = await strapi.db.query('api::message.message').findMany({
             where: { session: sessionId },
           });
-    
+
           const messageIds = messagesToDelete.map(message => message.id);
-    
+
           await strapi.db.query('api::message.message').deleteMany({
             where: { id: { $in: messageIds } },
           });
-    
+
           await strapi.db.query('api::session.session').delete({
             where: { id: sessionId, users_permissions_user: userId },
           });
-    
+
           socket.emit('sessionDeleted', { sessionId });
         } catch (error) {
           console.error('Error deleting session:', error);
