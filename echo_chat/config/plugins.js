@@ -5,7 +5,7 @@ module.exports = ({env}) => ({
 			contentTypes: ['api::article.article'],
             socket: {
 				serverOptions: {
-					cors: { origin: 'http://localhost:3000', methods: ['GET', 'POST'] },
+					cors: { origin: 'https://echo-chat-2h3n.onrender.com/', methods: ['GET', 'POST'] },
 				},
 			},
 		},
