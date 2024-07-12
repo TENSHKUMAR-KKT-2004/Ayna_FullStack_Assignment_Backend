@@ -3,10 +3,10 @@ module.exports = ({ env }) => ({
 		enabled: true,
 		config: {
 			socket: {
+				contentTypes: ['api::message.message', 'api::session.session'],
 				serverOptions: {
 					cors: {
-						origin: 'https://echo-chat-2h3n.onrender.com/', methods: ['GET', 'POST'],allowedHeaders: ["my-custom-header"],
-						credentials: true,
+						origin: 'https://echo-chat-2h3n.onrender.com/', methods: ['GET', 'POST']
 					},
 				},
 			},

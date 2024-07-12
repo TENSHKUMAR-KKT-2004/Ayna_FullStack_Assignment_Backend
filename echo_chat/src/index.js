@@ -17,12 +17,9 @@ module.exports = {
    * run jobs, or perform some special logic.
    */
   bootstrap({ strapi }) {
-
-    let interval
     let { Server } = require('socket.io')
-    var axios = require("axios")
 
-    var io = new Server(strapi.server, {
+    var io = new Server(strapi.server.httpServer, {
       cors: {
         origin: "https://echo-chat-2h3n.onrender.com/",
         methods: ["GET", "POST"],
