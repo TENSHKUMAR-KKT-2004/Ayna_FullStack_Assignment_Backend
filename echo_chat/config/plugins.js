@@ -1,15 +1,4 @@
 module.exports = ({env}) => ({
-    io: {
-		enabled: true,
-		config: {
-			contentTypes: ['api::article.article'],
-            socket: {
-				serverOptions: {
-					cors: { origin: 'https://echo-chat-2h3n.onrender.com', methods: ['GET', 'POST'] },
-				},
-			},
-		},
-	},
 	graphql: {
 		config: {
 		  endpoint: '/graphql',
